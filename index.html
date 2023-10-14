@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promashik Live-Translation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        body {
+            background-color: #585858;
+            min-height: 100vh;
+            height: 100%;
+            position: relative;
+            padding-bottom: 100px;
+        }
+
+        footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .animate-bg {
+            animation: animate-bg .5s ease-in-out;
+        }
+
+        @keyframes animate-bg {
+            0% {
+                background-color: #3c5764;
+            }
+            100% {
+                background-color: var(--bs-dark);
+            }
+        }
+    </style>
+</head>
+<body data-bs-theme="dark">
+    <nav class="navbar bg-dark border-bottom border-body" data-bs-theme="dark">
+        <div class="container-md">
+            <span class="navbar-brand mb-0 h1">Promashik &nbsp; Прямой эфир чат</span>
+        </div>
+    </nav>
+
+    <div class="container-md pt-4">
+        <div class="row">
+            <div class="col-6">
+                <h2 class="mb-0">Сообщения:</h2>
+                <div class="mb-2">
+                    <input type="checkbox" id="follow" checked>
+                    <label for="follow">Следовать последнее сообщение</label>
+                </div>
+            </div>
+            <div class="col-6 d-flex justify-content-end align-items-center">
+                <button type="button" class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                    Помощь обозначений
+                </button>
+            </div>
+        </div>
+
+        <div id="scroll" class="border border-info-subtle rounded bg-body-secondary" style="height: 500px; overflow-y: scroll">
+            <div class="w-100 h-100 d-flex justify-content-center align-items-center flex-column gap-3" id="loading">
+                <div class="spinner-border" role="status" style="width: 4rem; height: 4rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="text-white">Подключение...</span>
+            </div>
+            <ul class="list-group list-group-flush p-0" id="messages"></ul>
+        </div>
+    </div>
+
+    <footer class="footer mt-auto py-3 bg-dark border-top border-body" data-bs-theme="dark">
+        <div class="container-md">
+            <span class="text-muted text-center">&copy; Developed by Dhulfi in 2023</span>
+        </div>
+    </footer>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Помощь обозначений</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    <i>Имя пользователя:</i><br>
+                    <b class="text-secondary">@username</b> - участник <br>
+                    <b class="text-danger">@username</b> - модератор <br>
+                    <br>
+                    <i>Перевод сообщения:</i><br>
+                    <span class="badge bg-secondary"><i class="fa fa-globe"></i></span> - перевод не надо <br>
+                    <span class="badge bg-info"><i class="fa fa-globe"></i></span> - перевод успешно на русский <br>
+                    <i>* на кнопку можно нажать с целью показать оригинальное сообщение *</i>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">Спасибо (закрыть)</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const messages = document.getElementById('messages');
+        const scroll = document.getElementById('scroll');
+        const follow = document.getElementById('follow');
+        const loading = document.getElementById('loading');
+
+        socket.on('chat message', (lan, tra, msg, data) => {
+            const item = document.createElement('li');
+            item.classList.add('list-group-item');
+            item.classList.add('animate-bg');
+            item.innerHTML = `
+                <b>
+                    ${data.nickname}
+                    <span class="text-${data.isModerator ? 'danger' : 'secondary'}">@${data.uniqueId}</span>
+                </b>
+                <br>
+                <a class="badge bg-${lan == 'ru' ? 'secondary' : 'info'}" data-bs-toggle="collapse" href="#${data.msgId}" role="button" aria-expanded="false" aria-controls="${data.msgId}">
+                    <i class="fa fa-globe"></i>
+                </a>
+                ${tra}
+                <div class="collapse" id="${data.msgId}">
+                    <div class="card card-body p-2 bg-body-secondary">
+                        ${msg}
+                    </div>
+                </div>
+            `;
+            messages.appendChild(item);
+            if (follow.checked) {
+                scroll.scrollTop = scroll.scrollHeight;            
+            }
+        });
+
+        socket.on('live connected', () => {
+            loading.remove();
+        });
+
+        socket.on('live error', () => {
+            scroll.innerHTML = `
+                <div class="w-100 h-100" id="error">
+                    <div class="d-flex flex-column justify-content-center align-items-center h-100">
+                        <h1 class="">😔</h1>
+                        <h3 class="text-danger text-center w-50">
+                            На данный момент Promashik не ведет прямую трансляцию
+                        </h3>
+                    </div>
+                </div>
+            `;
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+</body>
+</html>
