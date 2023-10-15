@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const translate = require('@iamtraction/google-translate');
 const { WebcastPushConnection } = require('tiktok-live-connector');
 
+const port = process.env.PORT || 3000;
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
@@ -45,6 +46,6 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(3000, () => {
-  console.log('server running at http://localhost:3000');
+server.listen(port, () => {
+  console.log(`server running at http://localhost:${port}`);
 });
